@@ -1,0 +1,16 @@
+{
+  "name": "파인리조트 소방히어로 게임",
+  "short_name": "파인소방히어로",
+  "start_url": "./index.html",
+  "display": "standalone",
+  "background_color": "#0b1320",
+  "theme_color": "#0086B3",
+  "icons": [
+    {
+      "src": "pine-man-icon.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ]
+}

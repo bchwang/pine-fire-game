@@ -1,0 +1,850 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+  <meta name="apple-mobile-web-app-title" content="파인소방히어로" />
+  <meta name="theme-color" content="#0086B3" />
+  <title>파인리조트: 출동! 소화기 히어로 & 1층 방화문 대탈출</title>
+  <link id="dynamic-favicon" rel="icon" type="image/png" href="pine-man-icon.png" />
+  <link id="dynamic-touch-icon" rel="apple-touch-icon" href="pine-man-icon.png" />
+  <link id="dynamic-manifest" rel="manifest" href="manifest.json" />
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; user-select: none; -webkit-user-select: none; }
+    body {
+      background: #0b1320;
+      color: #f8fafc;
+      font-family: 'Pretendard', -apple-system, BlinkMacSystemFont, 'Malgun Gothic', sans-serif;
+      overflow: hidden;
+      display: flex;
+      flex-direction: column;
+      height: 100vh;
+      width: 100vw;
+    }
+    /* 상단 헤더 및 다운로드 직통 바 */
+    header {
+      background: linear-gradient(90deg, #0f172a, #1e293b);
+      border-bottom: 2px solid #0086B3;
+      padding: 6px 12px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      flex-wrap: wrap;
+      gap: 6px;
+      z-index: 20;
+    }
+    .brand-box {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      background: #ffffff;
+      color: #111827;
+      padding: 3px 10px;
+      border-radius: 8px;
+      font-weight: 900;
+      font-size: 14px;
+      box-shadow: 0 2px 6px rgba(0,0,0,0.3);
+    }
+    .top-btn-group {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      flex-wrap: wrap;
+    }
+    .btn {
+      border: none;
+      border-radius: 6px;
+      padding: 6px 10px;
+      font-size: 12px;
+      font-weight: 800;
+      cursor: pointer;
+      color: #fff;
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+      transition: transform 0.1s;
+    }
+    .btn:active { transform: scale(0.95); }
+    .btn-icon-dl { background: linear-gradient(135deg, #0086B3, #0284c7); border: 1px solid #38bdf8; }
+    .btn-manifest { background: #475569; }
+    .btn-qr { background: #7c3aed; }
+    .btn-char { background: #ea580c; }
+    .btn-smoke-test { background: #dc2626; }
+
+    /* 상태 표시줄 (HUD) */
+    .hud-bar {
+      background: #1e293b;
+      padding: 6px 12px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 10px;
+      font-size: 13px;
+      border-bottom: 1px solid #334155;
+      flex-wrap: wrap;
+    }
+    .gauge-wrap {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+    .gauge-bg {
+      width: 110px;
+      height: 14px;
+      background: #0f172a;
+      border-radius: 7px;
+      overflow: hidden;
+      border: 1px solid #475569;
+    }
+    .gauge-fill { height: 100%; transition: width 0.15s; }
+    .mission-banner {
+      background: #f59e0b;
+      color: #111827;
+      padding: 3px 10px;
+      border-radius: 99px;
+      font-weight: 900;
+      font-size: 12px;
+    }
+
+    /* 메인 캔버스 영역 */
+    .game-container {
+      flex: 1;
+      position: relative;
+      background: #090f1a;
+      overflow: hidden;
+    }
+    canvas#gameCanvas {
+      width: 100%;
+      height: 100%;
+      display: block;
+    }
+
+    /* 모바일 및 터치 컨트롤러 */
+    .touch-controls {
+      background: #0f172a;
+      border-top: 2px solid #1e293b;
+      padding: 8px 14px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 10px;
+      z-index: 20;
+    }
+    .dpad, .action-pad { display: flex; gap: 8px; }
+    .t-btn {
+      background: #1e293b;
+      border: 2px solid #475569;
+      color: #f8fafc;
+      border-radius: 12px;
+      padding: 12px 16px;
+      font-size: 15px;
+      font-weight: 900;
+      cursor: pointer;
+      touch-action: manipulation;
+    }
+    .t-btn:active { background: #334155; transform: scale(0.95); }
+    .t-btn.fire-btn { background: #dc2626; border-color: #f87171; }
+    .t-btn.jump-btn { background: #2563eb; border-color: #60a5fa; }
+    .t-btn.stair-btn { background: #059669; border-color: #34d399; }
+
+    /* 모달 팝업 */
+    .modal-overlay {
+      position: fixed;
+      inset: 0;
+      background: rgba(0,0,0,0.8);
+      display: none;
+      align-items: center;
+      justify-content: center;
+      z-index: 100;
+      padding: 16px;
+    }
+    .modal-card {
+      background: #1e293b;
+      border: 2px solid #38bdf8;
+      border-radius: 16px;
+      max-width: 480px;
+      width: 100%;
+      padding: 20px;
+      text-align: center;
+      box-shadow: 0 15px 40px rgba(0,0,0,0.6);
+    }
+    .modal-card h2 { margin-bottom: 10px; color: #38bdf8; font-size: 20px; }
+    .modal-card p { font-size: 13px; color: #cbd5e1; line-height: 1.5; margin-bottom: 12px; }
+    .icon-preview {
+      width: 120px;
+      height: 120px;
+      border-radius: 26px;
+      border: 3px solid #38bdf8;
+      margin: 10px auto;
+      display: block;
+      box-shadow: 0 8px 20px rgba(0,134,179,0.5);
+    }
+  </style>
+</head>
+<body>
+
+  <!-- 상단 직통 버튼 바: 찾으셨던 pine-man-icon.png 다운로드 버튼이 맨 위에 바로 있습니다! -->
+  <header>
+    <div class="brand-box">
+      <svg width="26" height="26" viewBox="0 0 100 100">
+        <ellipse cx="50" cy="50" rx="36" ry="46" transform="rotate(-18 50 50)" fill="#0086B3"/>
+        <path d="M48 20 C35 32, 62 38, 42 50 C28 60, 68 65, 45 82" stroke="#CCCCCC" stroke-width="8" fill="none" stroke-linecap="round"/>
+      </svg>
+      <span>파인리조트 소방히어로</span>
+    </div>
+
+    <div class="top-btn-group">
+      <button class="btn btn-icon-dl" onclick="downloadPineManIcon()">🌲 2. pine-man-icon.png 다운로드</button>
+      <button class="btn btn-manifest" onclick="downloadManifest()">⚙️ 3. manifest.json 다운로드</button>
+      <button class="btn btn-qr" onclick="openModal('iconModal')">📱 아이콘 미리보기 & 공유</button>
+      <button class="btn btn-char" id="charToggleBtn" onclick="toggleCharacter()">🦸‍♂️ 캐릭터: 파인맨</button>
+      <button class="btn btn-smoke-test" onclick="triggerSmokeEscape()">🚨 연기탈출·쓰러짐 체험</button>
+    </div>
+  </header>
+
+  <!-- 게임 상태 바 -->
+  <div class="hud-bar">
+    <div class="gauge-wrap">
+      <span>🧯 소화기:</span>
+      <div class="gauge-bg"><div id="extGauge" class="gauge-fill" style="width:100%; background:#38bdf8;"></div></div>
+      <span id="extText">100%</span>
+    </div>
+    <div class="gauge-wrap">
+      <span>😷 연기흡입:</span>
+      <div class="gauge-bg"><div id="smokeGauge" class="gauge-fill" style="width:0%; background:#ef4444;"></div></div>
+      <span id="smokeText">0%</span>
+    </div>
+    <div id="missionBanner" class="mission-banner">
+      🎯 1단계: 노란 발판 위에서 소화기(스페이스바)를 쏴 불난 객실 2곳을 끄세요!
+    </div>
+  </div>
+
+  <!-- 메인 게임 캔버스 -->
+  <div class="game-container">
+    <canvas id="gameCanvas"></canvas>
+  </div>
+
+  <!-- 하단 스마트폰 터치 & PC 겸용 조작부 -->
+  <div class="touch-controls">
+    <div class="dpad">
+      <button class="t-btn" id="btnLeft">◀ 왼쪽</button>
+      <button class="t-btn" id="btnRight">오른쪽 ▶</button>
+    </div>
+    <div class="action-pad">
+      <button class="t-btn jump-btn" id="btnJump">▲ 점프</button>
+      <button class="t-btn fire-btn" id="btnSpray">🧯 소화기 발사</button>
+      <button class="t-btn stair-btn" id="btnStair">🚪 방화문/계단 이동</button>
+    </div>
+  </div>
+
+  <!-- 파인맨 아이콘 다운로드 & QR 모달 -->
+  <div id="iconModal" class="modal-overlay">
+    <div class="modal-card">
+      <h2>🌲 파인맨 스마트폰 바로가기 아이콘</h2>
+      <img id="modalIconImg" class="icon-preview" alt="파인맨 아이콘" />
+      <p>
+        아래 버튼을 누르면 스마트폰 바탕화면용 <b>512×512 고화질 파인맨 아이콘(pine-man-icon.png)</b>이 즉시 저장됩니다.<br/>
+        GitHub 저장소에 <b>index.html</b>, <b>pine-man-icon.png</b>, <b>manifest.json</b>을 함께 올리면 스마트폰 홈 화면에 파인맨 아이콘이 생성됩니다!
+      </p>
+      <div style="display:flex; gap:8px; justify-content:center; flex-wrap:wrap; margin-bottom:12px;">
+        <button class="btn btn-icon-dl" style="padding:10px 14px; font-size:14px;" onclick="downloadPineManIcon()">💾 pine-man-icon.png 저장</button>
+        <button class="btn btn-manifest" style="padding:10px 14px; font-size:14px;" onclick="downloadManifest()">⚙️ manifest.json 저장</button>
+      </div>
+      <button class="btn" style="background:#334155; padding:8px 20px;" onclick="closeModal('iconModal')">닫기</button>
+    </div>
+  </div>
+
+  <!-- 미션 클리어 모달 -->
+  <div id="clearModal" class="modal-overlay">
+    <div class="modal-card">
+      <h2>🏆 1층 피난유도등 방화문 탈출 성공!</h2>
+      <p id="clearDesc">
+        축하합니다! 불이 난 객실에 소화기를 분사해 72℃ 옛날 스프링클러 헤드·옥상 고가수조·지하 3층 펌프와 합동 진화하고, 유독 연기를 피해 초록색 피난유도등이 켜진 1층 방화문 밖으로 안전하게 생존 탈출했습니다!
+      </p>
+      <button class="btn btn-icon-dl" style="padding:10px 22px; font-size:15px;" onclick="resetGame()">🔄 다시 플레이하기</button>
+    </div>
+  </div>
+
+  <script>
+    // ==========================================
+    // 1. 512x512 파인맨 바로가기 아이콘 생성 및 다운로드
+    // ==========================================
+    let pineManIconDataUrl = '';
+
+    function generatePineManIcon() {
+      const c = document.createElement('canvas');
+      c.width = 512;
+      c.height = 512;
+      const ctx = c.getContext('2d');
+
+      // 배경 라운드 사각형
+      const grad = ctx.createLinearGradient(0, 0, 512, 512);
+      grad.addColorStop(0, '#0f172a');
+      grad.addColorStop(1, '#1e293b');
+      ctx.fillStyle = grad;
+      ctx.beginPath();
+      ctx.roundRect(0, 0, 512, 512, 110);
+      ctx.fill();
+
+      // 붉은 히어로 망토
+      ctx.fillStyle = '#ef4444';
+      ctx.beginPath();
+      ctx.moveTo(150, 310);
+      ctx.lineTo(90, 470);
+      ctx.lineTo(422, 470);
+      ctx.lineTo(362, 310);
+      ctx.closePath();
+      ctx.fill();
+
+      // 파인맨 몸통 (소방 구조복)
+      ctx.fillStyle = '#f97316';
+      ctx.beginPath();
+      ctx.roundRect(176, 310, 160, 150, 35);
+      ctx.fill();
+      ctx.fillStyle = '#fde047';
+      ctx.fillRect(176, 365, 160, 22);
+
+      // 파인리조트 심볼 로고 모양 머리 (기울어진 #0086B3 타원 + 은회색 소나무)
+      ctx.save();
+      ctx.translate(256, 195);
+      ctx.rotate(-16 * Math.PI / 180);
+      ctx.fillStyle = '#0086B3';
+      ctx.beginPath();
+      ctx.ellipse(0, 0, 105, 130, 0, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.lineWidth = 8;
+      ctx.strokeStyle = '#38bdf8';
+      ctx.stroke();
+
+      // 은회색 소나무 곡선 결
+      ctx.strokeStyle = '#CCCCCC';
+      ctx.lineWidth = 16;
+      ctx.lineCap = 'round';
+      ctx.beginPath();
+      ctx.moveTo(-10, -85);
+      ctx.bezierCurveTo(-55, -50, 45, -30, -20, 5);
+      ctx.bezierCurveTo(-65, 35, 55, 50, -15, 85);
+      ctx.stroke();
+      ctx.restore();
+
+      // 파인맨 영웅 눈 & 웃는 입
+      ctx.fillStyle = '#ffffff';
+      ctx.beginPath();
+      ctx.arc(225, 195, 16, 0, Math.PI * 2);
+      ctx.arc(295, 195, 16, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.fillStyle = '#0f172a';
+      ctx.beginPath();
+      ctx.arc(228, 195, 8, 0, Math.PI * 2);
+      ctx.arc(298, 195, 8, 0, Math.PI * 2);
+      ctx.fill();
+
+      // 손에 든 빨간 소화기
+      ctx.fillStyle = '#dc2626';
+      ctx.beginPath();
+      ctx.roundRect(350, 330, 52, 95, 14);
+      ctx.fill();
+
+      // 하단 타이틀 배지
+      ctx.fillStyle = '#ffffff';
+      ctx.font = '900 44px Pretendard, Malgun Gothic, sans-serif';
+      ctx.textAlign = 'center';
+      ctx.fillText('파인리조트', 256, 485);
+
+      pineManIconDataUrl = c.toDataURL('image/png');
+      document.getElementById('dynamic-favicon').href = pineManIconDataUrl;
+      document.getElementById('dynamic-touch-icon').href = pineManIconDataUrl;
+      document.getElementById('modalIconImg').src = pineManIconDataUrl;
+    }
+
+    function downloadPineManIcon() {
+      if (!pineManIconDataUrl) generatePineManIcon();
+      const a = document.createElement('a');
+      a.href = pineManIconDataUrl;
+      a.download = 'pine-man-icon.png';
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+    }
+
+    function downloadManifest() {
+      const manifestObj = {
+        name: "파인리조트 소방히어로 게임",
+        short_name: "파인소방히어로",
+        start_url: "./index.html",
+        display: "standalone",
+        background_color: "#0b1320",
+        theme_color: "#0086B3",
+        icons: [
+          { src: "pine-man-icon.png", sizes: "512x512", type: "image/png", purpose: "any maskable" }
+        ]
+      };
+      const blob = new Blob([JSON.stringify(manifestObj, null, 2)], { type: 'application/json' });
+      const a = document.createElement('a');
+      a.href = URL.createObjectURL(blob);
+      a.download = 'manifest.json';
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+    }
+
+    function openModal(id) { document.getElementById(id).style.display = 'flex'; }
+    function closeModal(id) { document.getElementById(id).style.display = 'none'; }
+
+    // ==========================================
+    // 2. 메인 게임 로직 (수달 달이 & 파인맨 + 소화기 + 피난유도등 방화문)
+    // ==========================================
+    const canvas = document.getElementById('gameCanvas');
+    const ctx = canvas.getContext('2d');
+
+    function resizeCanvas() {
+      canvas.width = canvas.parentElement.clientWidth;
+      canvas.height = canvas.parentElement.clientHeight;
+    }
+    window.addEventListener('resize', resizeCanvas);
+    resizeCanvas();
+
+    let charType = 'pineman'; // 'pineman' or 'otter'
+    function toggleCharacter() {
+      charType = charType === 'pineman' ? 'otter' : 'pineman';
+      document.getElementById('charToggleBtn').innerText =
+        charType === 'pineman' ? '🦸‍♂️ 캐릭터: 파인맨' : '🦦 캐릭터: 수달 달이';
+    }
+
+    const floors = [
+      { level: 1, name: '1F 로비·식당 (외부 방화문 EXIT)', rooms: [] },
+      { level: 2, name: '2F 방재실(R형수신기) & 객실', rooms: [{ x: 260, no: '201호', fire: true, progress: 0 }, { x: 520, no: '202호', fire: false, progress: 100 }] },
+      { level: 3, name: '8F 콘도 객실층 (옛날 72℃ 헤드)', rooms: [{ x: 300, no: '801호', fire: false, progress: 100 }, { x: 560, no: '802호', fire: true, progress: 0 }] }
+    ];
+
+    const obstacles = [
+      { floorIdx: 0, x: 380, label: '방화문 앞 적치물' },
+      { floorIdx: 1, x: 420, label: '문어발 콘센트' },
+      { floorIdx: 2, x: 450, label: '복도 여행가방' }
+    ];
+
+    const player = {
+      floorIdx: 1,
+      x: 130,
+      y: 0,
+      vy: 0,
+      isJumping: false,
+      dir: 1,
+      spraying: false,
+      extinguisher: 100,
+      smoke: 0,
+      fainted: false,
+      faintTimer: 0,
+      towelBuff: 0
+    };
+
+    let gamePhase = 'fire'; // 'fire' -> 'escape' -> 'clear'
+    let keys = { left: false, right: false };
+
+    function triggerSmokeEscape() {
+      gamePhase = 'escape';
+      player.smoke = 75;
+      document.getElementById('missionBanner').style.background = '#ef4444';
+      document.getElementById('missionBanner').style.color = '#ffffff';
+      document.getElementById('missionBanner').innerText =
+        '🚨 2단계(연기 확산): 초록색 [피난유도등 EXIT] 방화문 계단으로 내려가 1층 왼쪽 방화문으로 탈출하세요!';
+    }
+
+    function resetGame() {
+      closeModal('clearModal');
+      floors[1].rooms[0].fire = true; floors[1].rooms[0].progress = 0;
+      floors[2].rooms[1].fire = true; floors[2].rooms[1].progress = 0;
+      player.floorIdx = 1;
+      player.x = 130;
+      player.extinguisher = 100;
+      player.smoke = 0;
+      player.fainted = false;
+      gamePhase = 'fire';
+      document.getElementById('missionBanner').style.background = '#f59e0b';
+      document.getElementById('missionBanner').style.color = '#111827';
+      document.getElementById('missionBanner').innerText =
+        '🎯 1단계: 노란 발판 위에서 소화기(스페이스바)를 쏴 불난 객실 2곳을 끄세요!';
+    }
+
+    // 키보드 및 터치 이벤트
+    window.addEventListener('keydown', e => {
+      if (e.code === 'ArrowLeft') keys.left = true;
+      if (e.code === 'ArrowRight') keys.right = true;
+      if (e.code === 'ArrowUp') doJump();
+      if (e.code === 'Space') player.spraying = true;
+      if (e.code === 'KeyE' || e.code === 'Enter') useStairDoor();
+    });
+    window.addEventListener('keyup', e => {
+      if (e.code === 'ArrowLeft') keys.left = false;
+      if (e.code === 'ArrowRight') keys.right = false;
+      if (e.code === 'Space') player.spraying = false;
+    });
+
+    function bindTouch(id, startFn, endFn) {
+      const el = document.getElementById(id);
+      el.addEventListener('mousedown', startFn);
+      el.addEventListener('mouseup', endFn);
+      el.addEventListener('touchstart', e => { e.preventDefault(); startFn(); });
+      el.addEventListener('touchend', e => { e.preventDefault(); endFn(); });
+    }
+    bindTouch('btnLeft', () => keys.left = true, () => keys.left = false);
+    bindTouch('btnRight', () => keys.right = true, () => keys.right = false);
+    bindTouch('btnJump', doJump, () => {});
+    bindTouch('btnSpray', () => player.spraying = true, () => player.spraying = false);
+    bindTouch('btnStair', useStairDoor, () => {});
+
+    function doJump() {
+      if (!player.isJumping && !player.fainted) {
+        player.vy = -10;
+        player.isJumping = true;
+      }
+    }
+
+    function useStairDoor() {
+      if (player.fainted) return;
+      const w = canvas.width;
+      // 좌측 끝(x < 120) 또는 우측 끝(x > w - 140) 피난유도등 방화문
+      if (player.x < 130 || player.x > w - 150) {
+        player.smoke = Math.max(0, player.smoke - 30); // 피난유도등 신선한 공기 회복
+        if (gamePhase === 'escape') {
+          if (player.floorIdx > 0) {
+            player.floorIdx--;
+          } else if (player.x < 130) {
+            gamePhase = 'clear';
+            openModal('clearModal');
+          }
+        } else {
+          player.floorIdx = (player.floorIdx + 1) % floors.length;
+        }
+      }
+    }
+
+    function update() {
+      const w = canvas.width;
+      if (player.fainted) {
+        player.faintTimer -= 1 / 60;
+        if (player.faintTimer <= 0) {
+          player.fainted = false;
+          player.smoke = 20;
+          player.towelBuff = 5; // 5초간 젖은 수건 보호막
+        }
+        return;
+      }
+
+      if (player.towelBuff > 0) player.towelBuff -= 1 / 60;
+
+      const speed = player.smoke > 70 ? 2.5 : 4.8;
+      if (keys.left) { player.x = Math.max(40, player.x - speed); player.dir = -1; }
+      if (keys.right) { player.x = Math.min(w - 60, player.x + speed); player.dir = 1; }
+
+      // 점프 물리
+      player.y += player.vy;
+      if (player.y < 0) {
+        player.vy += 0.55;
+      } else {
+        player.y = 0;
+        player.vy = 0;
+        player.isJumping = false;
+      }
+
+      // 소화기 분사 및 화재 진압 판정
+      const curFloor = floors[player.floorIdx];
+      if (player.spraying && player.extinguisher > 0) {
+        player.extinguisher = Math.max(0, player.extinguisher - 0.25);
+        curFloor.rooms.forEach(rm => {
+          const roomScreenX = (rm.x / 800) * w;
+          if (rm.fire && Math.abs(player.x - roomScreenX) < 95) {
+            player.dir = roomScreenX >= player.x ? 1 : -1;
+            rm.progress = Math.min(100, rm.progress + 1.1);
+            if (rm.progress >= 100) {
+              rm.fire = false;
+            }
+          }
+        });
+      }
+
+      // 모든 불 진화 또는 소화기 소진 시 연기 탈출 단계로 전환
+      const remainingFires = floors.reduce((acc, f) => acc + f.rooms.filter(r => r.fire).length, 0);
+      if (gamePhase === 'fire' && (remainingFires === 0 || player.extinguisher <= 0)) {
+        triggerSmokeEscape();
+      }
+
+      // 연기 흡입 계산 (연기 단계이거나 불난 객실 근처일 때 상승, 피난유도등 앞에서는 감소)
+      const nearExitDoor = player.x < 120 || player.x > w - 140;
+      if (nearExitDoor) {
+        player.smoke = Math.max(0, player.smoke - 0.4);
+        if (gamePhase === 'escape' && player.floorIdx === 0 && player.x < 110) {
+          gamePhase = 'clear';
+          openModal('clearModal');
+        }
+      } else if (gamePhase === 'escape' && player.towelBuff <= 0) {
+        player.smoke = Math.min(100, player.smoke + 0.22);
+      }
+
+      if (player.smoke >= 100 && !player.fainted) {
+        player.fainted = true;
+        player.faintTimer = 3.0;
+      }
+
+      // HUD 업데이트
+      document.getElementById('extGauge').style.width = player.extinguisher + '%';
+      document.getElementById('extText').innerText = Math.round(player.extinguisher) + '%';
+      document.getElementById('smokeGauge').style.width = player.smoke + '%';
+      document.getElementById('smokeText').innerText = Math.round(player.smoke) + '%';
+    }
+
+    function draw() {
+      const w = canvas.width;
+      const h = canvas.height;
+      ctx.clearRect(0, 0, w, h);
+
+      const floorH = h / 3;
+
+      // 3개 층 그리기
+      floors.forEach((fl, idx) => {
+        const topY = (2 - idx) * floorH;
+        const bottomY = topY + floorH - 12;
+
+        // 복도 배경
+        ctx.fillStyle = idx === player.floorIdx ? '#1e293b' : '#0f172a';
+        ctx.fillRect(0, topY, w, floorH - 12);
+        ctx.fillStyle = '#334155';
+        ctx.fillRect(0, bottomY, w, 12);
+
+        // 층 이름 및 옥상 고가수조/지하3층 펌프 안내
+        ctx.fillStyle = '#94a3b8';
+        ctx.font = 'bold 13px sans-serif';
+        ctx.textAlign = 'left';
+        ctx.fillText(fl.name, 130, topY + 22);
+
+        // 양쪽 끝 초록색 피난유도등(EXIT) 방화문
+        [20, w - 95].forEach((doorX, dIdx) => {
+          // 초록 유도등 스포트라이트
+          const beam = ctx.createLinearGradient(doorX + 35, topY + 15, doorX + 35, bottomY);
+          beam.addColorStop(0, 'rgba(16, 185, 129, 0.45)');
+          beam.addColorStop(1, 'rgba(16, 185, 129, 0.05)');
+          ctx.fillStyle = beam;
+          ctx.fillRect(doorX - 8, topY + 18, 90, bottomY - topY - 18);
+
+          // 피난유도등 표지판
+          ctx.fillStyle = '#10b981';
+          ctx.fillRect(doorX + 8, topY + 8, 60, 20);
+          ctx.fillStyle = '#ffffff';
+          ctx.font = '900 11px sans-serif';
+          ctx.textAlign = 'center';
+          ctx.fillText('🏃EXIT', doorX + 38, topY + 22);
+
+          // 방화문 본체
+          ctx.fillStyle = idx === 0 && dIdx === 0 ? '#059669' : '#1e40af';
+          ctx.fillRect(doorX + 10, bottomY - 70, 56, 70);
+          ctx.strokeStyle = '#34d399';
+          ctx.lineWidth = 2;
+          ctx.strokeRect(doorX + 10, bottomY - 70, 56, 70);
+          ctx.fillStyle = '#fff';
+          ctx.font = 'bold 11px sans-serif';
+          ctx.fillText(idx === 0 && dIdx === 0 ? '1층탈출구' : '방화문계단', doorX + 38, bottomY - 35);
+        });
+
+        // 객실 문 및 노란 타겟 발판 & 진행률 표시
+        fl.rooms.forEach(rm => {
+          const rx = (rm.x / 800) * w;
+          // 객실 문
+          ctx.fillStyle = rm.fire ? '#7f1d1d' : '#0284c7';
+          ctx.fillRect(rx - 30, bottomY - 78, 60, 78);
+          ctx.strokeStyle = rm.fire ? '#f87171' : '#38bdf8';
+          ctx.lineWidth = 2;
+          ctx.strokeRect(rx - 30, bottomY - 78, 60, 78);
+
+          ctx.fillStyle = '#fff';
+          ctx.font = 'bold 12px sans-serif';
+          ctx.textAlign = 'center';
+          ctx.fillText(rm.no, rx, bottomY - 55);
+
+          if (rm.fire) {
+            // 노란 타겟 발판
+            ctx.fillStyle = '#fde047';
+            ctx.fillRect(rx - 48, bottomY - 6, 96, 6);
+            ctx.font = '900 11px sans-serif';
+            ctx.fillStyle = '#fde047';
+            ctx.fillText('🎯여기서 소화기 발사!', rx, bottomY + 11);
+
+            // 화염 애니메이션
+            const flameScale = rm.progress >= 50 ? 0.55 : 1.0;
+            ctx.fillStyle = '#ef4444';
+            ctx.beginPath();
+            ctx.arc(rx, bottomY - 30, (22 + Math.sin(Date.now() / 80) * 4) * flameScale, 0, Math.PI * 2);
+            ctx.fill();
+            ctx.fillStyle = '#facc15';
+            ctx.beginPath();
+            ctx.arc(rx, bottomY - 26, 12 * flameScale, 0, Math.PI * 2);
+            ctx.fill();
+
+            // 50% 돌파 시 객실 내 72℃ 옛날 가용편 스프링클러 물줄기 합세
+            if (rm.progress >= 50) {
+              ctx.strokeStyle = '#38bdf8';
+              ctx.lineWidth = 2;
+              for (let i = -2; i <= 2; i++) {
+                ctx.beginPath();
+                ctx.moveTo(rx, bottomY - 74);
+                ctx.lineTo(rx + i * 10, bottomY - 20);
+                ctx.stroke();
+              }
+              ctx.fillStyle = '#38bdf8';
+              ctx.font = 'bold 11px sans-serif';
+              ctx.fillText('💧72℃ 옛날헤드 개방 합세!', rx, topY + 25);
+            }
+
+            // 진압 게이지 바 (0~100%)
+            ctx.fillStyle = '#0f172a';
+            ctx.fillRect(rx - 38, bottomY - 98, 76, 12);
+            ctx.fillStyle = '#22c55e';
+            ctx.fillRect(rx - 38, bottomY - 98, (76 * rm.progress) / 100, 12);
+            ctx.fillStyle = '#fff';
+            ctx.font = 'bold 10px sans-serif';
+            ctx.fillText(Math.round(rm.progress) + '% 진압', rx, bottomY - 88);
+          } else {
+            ctx.fillStyle = '#dcfce7';
+            ctx.font = 'bold 11px sans-serif';
+            ctx.fillText('✅ SAFE 완료', rx, bottomY - 25);
+          }
+        });
+
+        // 장애물 표시
+        obstacles.filter(o => o.floorIdx === idx).forEach(ob => {
+          const ox = (ob.x / 800) * w;
+          ctx.fillStyle = '#f97316';
+          ctx.fillRect(ox - 16, bottomY - 24, 32, 24);
+          ctx.fillStyle = '#cbd5e1';
+          ctx.font = '10px sans-serif';
+          ctx.textAlign = 'center';
+          ctx.fillText(ob.label, ox, bottomY - 28);
+        });
+
+        // 연기 대방출 시각화
+        if (gamePhase === 'escape') {
+          ctx.fillStyle = 'rgba(15, 23, 42, 0.55)';
+          ctx.fillRect(105, topY + 12, w - 210, floorH - 28);
+          ctx.fillStyle = '#f87171';
+          ctx.font = 'bold 12px sans-serif';
+          ctx.textAlign = 'center';
+          ctx.fillText('💨 유독 연기 확산 중! 초록색 피난유도등(EXIT)으로 대피하세요!', w / 2, topY + 42);
+        }
+      });
+
+      // 플레이어 캐릭터 그리기 (파인맨 or 귀여운 수달 달이)
+      const pFloorTop = (2 - player.floorIdx) * floorH;
+      const py = pFloorTop + floorH - 12 + player.y;
+      const px = player.x;
+
+      ctx.save();
+      ctx.translate(px, py);
+      if (player.fainted) {
+        ctx.rotate(Math.PI / 2);
+        ctx.translate(-22, -10);
+      }
+
+      if (charType === 'pineman') {
+        // 파인맨: 붉은 망토 + 주황 소방복 + 파인리조트 로고 헤드
+        ctx.fillStyle = '#ef4444';
+        ctx.beginPath();
+        ctx.moveTo(-8 * player.dir, -36);
+        ctx.lineTo(-24 * player.dir, -8);
+        ctx.lineTo(0, -12);
+        ctx.fill();
+
+        ctx.fillStyle = '#f97316';
+        ctx.fillRect(-11, -34, 22, 26);
+
+        // 파인리조트 심볼 머리
+        ctx.save();
+        ctx.translate(0, -50);
+        ctx.rotate(-15 * Math.PI / 180);
+        ctx.fillStyle = '#0086B3';
+        ctx.beginPath();
+        ctx.ellipse(0, 0, 15, 19, 0, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.strokeStyle = '#CCCCCC';
+        ctx.lineWidth = 2.5;
+        ctx.beginPath();
+        ctx.moveTo(-2, -11);
+        ctx.quadraticCurveTo(6, -3, -3, 3);
+        ctx.quadraticCurveTo(6, 9, -2, 12);
+        ctx.stroke();
+        ctx.restore();
+      } else {
+        // 귀여운 수달 소방대원 달이
+        // 통통한 꼬리
+        ctx.fillStyle = '#78350f';
+        ctx.beginPath();
+        ctx.ellipse(-16 * player.dir, -12, 12, 6, 0.3 * player.dir, 0, Math.PI * 2);
+        ctx.fill();
+
+        // 몸통 & 노란 안전모
+        ctx.fillStyle = '#92400e';
+        ctx.beginPath();
+        ctx.roundRect(-12, -34, 24, 26, 10);
+        ctx.fill();
+
+        // 수달 얼굴 & 크림색 볼살
+        ctx.fillStyle = '#92400e';
+        ctx.beginPath();
+        ctx.arc(0, -48, 15, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.fillStyle = '#fef3c7';
+        ctx.beginPath();
+        ctx.arc(-5, -45, 7, 0, Math.PI * 2);
+        ctx.arc(5, -45, 7, 0, Math.PI * 2);
+        ctx.fill();
+        // 수염 & 코
+        ctx.fillStyle = '#f43f5e';
+        ctx.beginPath();
+        ctx.arc(0, -47, 3, 0, Math.PI * 2);
+        ctx.fill();
+        // 노란 소방 헬멧
+        ctx.fillStyle = '#facc15';
+        ctx.beginPath();
+        ctx.arc(0, -55, 14, Math.PI, 0);
+        ctx.fill();
+      }
+
+      // 소화기 분사 파티클
+      if (player.spraying && player.extinguisher > 0 && !player.fainted) {
+        ctx.fillStyle = 'rgba(255, 255, 255, 0.85)';
+        for (let i = 1; i <= 5; i++) {
+          ctx.beginPath();
+          ctx.arc(player.dir * (18 + i * 14), -26 + Math.sin(Date.now() / 50 + i) * 6, 4 + i * 2, 0, Math.PI * 2);
+          ctx.fill();
+        }
+      }
+      ctx.restore();
+
+      // 연기 흡입 상태 말풍선 (기침 / 어지럼증 / 3초 자동 부활)
+      ctx.textAlign = 'center';
+      ctx.font = '900 12px sans-serif';
+      if (player.fainted) {
+        ctx.fillStyle = '#fde047';
+        ctx.fillText(`💫 연기 질식! ${player.faintTimer.toFixed(1)}초 후 젖은수건 쓰고 자동 부활!`, px, py - 75);
+      } else if (player.towelBuff > 0) {
+        ctx.fillStyle = '#38bdf8';
+        ctx.fillText('💧 젖은 수건 보호막 작동 중!', px, py - 75);
+      } else if (player.smoke >= 70) {
+        ctx.fillStyle = '#f87171';
+        ctx.fillText('💫 어질어질... 초록색 피난유도등(EXIT)으로 가세요!', px, py - 75);
+      } else if (player.smoke >= 30) {
+        ctx.fillStyle = '#fbbf24';
+        ctx.fillText('😷 콜록! 콜록!', px, py - 75);
+      }
+
+      requestAnimationFrame(() => {
+        update();
+        draw();
+      });
+    }
+
+    generatePineManIcon();
+    draw();
+  </script>
+</body>
+</html>
