@@ -491,4 +491,410 @@
         if (Math.abs(clickX - sx) < 42) {
           if (clickedFloorIdx !== player.floorIdx && clickedFloorIdx >= 0 && clickedFloorIdx < floors.length) {
             player.floorIdx = clickedFloorIdx;
-            player.
+            player.x = sx;
+            player.portalCooldown = 1.0;
+            showFloatingMsg('🚪 선택한 층 방화문으로 이동!');
+          } else {
+            moveFloorSmart(0);
+          }
+        }
+      });
+    });
+
+    function handleUpAction() {
+      if (player.fainted) return;
+      const nearStair = getNearbyStair(canvas.width);
+      // 방화문 계단 앞에서는 ↑ 키를 누르면 즉시 위층(탈출 시 아래층) 이동!
+      if (nearStair) {
+        moveFloorSmart(gamePhase === 'escape' ? -1 : 1);
+      } else if (!player.isJumping) {
+        player.vy = -9.5;
+        player.isJumping = true;
+      }
+    }
+
+    function handleDownAction() {
+      if (player.fainted) return;
+      const nearStair = getNearbyStair(canvas.width);
+      if (nearStair) {
+        moveFloorSmart(-1);
+      }
+    }
+
+    function bindTouch(id, startFn, endFn) {
+      const el = document.getElementById(id);
+      el.addEventListener('mousedown', startFn);
+      el.addEventListener('mouseup', endFn);
+      el.addEventListener('touchstart', e => { e.preventDefault(); startFn(); });
+      el.addEventListener('touchend', e => { e.preventDefault(); endFn(); });
+    }
+    bindTouch('btnLeft', () => keys.left = true, () => keys.left = false);
+    bindTouch('btnRight', () => keys.right = true, () => keys.right = false);
+    bindTouch('btnJump', handleUpAction, () => {});
+    bindTouch('btnDown', handleDownAction, () => {});
+    bindTouch('btnSpray', () => player.spraying = true, () => player.spraying = false);
+
+    function update() {
+      const w = canvas.width;
+      if (player.floatingTimer > 0) player.floatingTimer -= 1 / 60;
+      if (player.portalCooldown > 0) player.portalCooldown -= 1 / 60;
+
+      if (player.fainted) {
+        player.faintTimer -= 1 / 60;
+        if (player.faintTimer <= 0) {
+          player.fainted = false;
+          player.smoke = 15;
+          player.towelBuff = 5;
+          showFloatingMsg('💧 젖은 수건 보호막으로 부활!');
+        }
+        return;
+      }
+
+      if (player.towelBuff > 0) player.towelBuff -= 1 / 60;
+
+      const speed = player.smoke > 70 ? 2.6 : 5.0;
+      if (keys.left) { player.x -= speed; player.dir = -1; }
+      if (keys.right) { player.x += speed; player.dir = 1; }
+
+      // 복도 양끝 방화문을 향해 계속 달리면 멈추지 않고 즉시 다음 층으로 자동 돌파!
+      if (player.x < 22) {
+        player.x = w * 0.06 + 42;
+        if (player.portalCooldown <= 0) moveFloorSmart(0);
+      } else if (player.x > w - 22) {
+        player.x = w * 0.94 - 42;
+        if (player.portalCooldown <= 0) moveFloorSmart(0);
+      }
+
+      // 점프 물리
+      player.y += player.vy;
+      if (player.y < 0) {
+        player.vy += 0.55;
+      } else {
+        player.y = 0;
+        player.vy = 0;
+        player.isJumping = false;
+      }
+
+      // ★ 천재적 자동 계단 포탈: 좌·중앙·우 방화문 앞에 0.35초 서 있으면 마우스 클릭 없이 자동 이동!
+      const nearStair = getNearbyStair(w);
+      if (nearStair && !player.spraying && player.portalCooldown <= 0) {
+        player.portalCharge += 1 / 22; // 약 0.35초 만에 게이지 100% 도달
+        if (player.portalCharge >= 1) {
+          // 다음 층 도착 후 무한 워프되지 않도록 문 옆 안전 위치로 살짝 이동
+          const offset = nearStair.index === 2 ? -46 : 46;
+          player.x = nearStair.x + offset;
+          moveFloorSmart(0);
+        }
+      } else {
+        player.portalCharge = Math.max(0, player.portalCharge - 0.08);
+      }
+
+      // 소화기 분사 및 화재 진압 판정
+      const curFloor = floors[player.floorIdx];
+      if (player.spraying && player.extinguisher > 0) {
+        player.extinguisher = Math.max(0, player.extinguisher - 0.22);
+        curFloor.rooms.forEach(rm => {
+          const roomScreenX = rm.rx * w;
+          if (rm.fire && Math.abs(player.x - roomScreenX) < 95) {
+            player.dir = roomScreenX >= player.x ? 1 : -1;
+            rm.progress = Math.min(100, rm.progress + 1.15);
+            if (rm.progress >= 100) {
+              rm.fire = false;
+              showFloatingMsg(`✅ ${rm.no} 진화 완료! 방화문으로 이동하세요!`);
+            }
+          }
+        });
+      }
+
+      // 모든 불 진화 또는 소화기 소진 시 연기 탈출 단계로 전환
+      const remainingFires = floors.reduce((acc, f) => acc + f.rooms.filter(r => r.fire).length, 0);
+      if (gamePhase === 'fire' && (remainingFires === 0 || player.extinguisher <= 0)) {
+        triggerSmokeEscape();
+      }
+
+      // 연기 흡입 계산 (피난유도등 방화문 근처에서는 신선한 공기로 감소)
+      if (nearStair) {
+        player.smoke = Math.max(0, player.smoke - 0.45);
+        if (gamePhase === 'escape' && player.floorIdx === 0) {
+          gamePhase = 'clear';
+          openModal('clearModal');
+        }
+      } else if (gamePhase === 'escape' && player.towelBuff <= 0) {
+        player.smoke = Math.min(100, player.smoke + 0.20);
+      }
+
+      if (player.smoke >= 100 && !player.fainted) {
+        player.fainted = true;
+        player.faintTimer = 3.0;
+      }
+
+      // HUD 업데이트
+      document.getElementById('extGauge').style.width = player.extinguisher + '%';
+      document.getElementById('extText').innerText = Math.round(player.extinguisher) + '%';
+      document.getElementById('smokeGauge').style.width = player.smoke + '%';
+      document.getElementById('smokeText').innerText = Math.round(player.smoke) + '%';
+    }
+
+    function draw() {
+      const w = canvas.width;
+      const h = canvas.height;
+      ctx.clearRect(0, 0, w, h);
+
+      const floorH = h / floors.length;
+
+      // 4개 층 그리기
+      floors.forEach((fl, idx) => {
+        const topY = (floors.length - 1 - idx) * floorH;
+        const bottomY = topY + floorH - 10;
+
+        // 복도 배경
+        ctx.fillStyle = idx === player.floorIdx ? '#1e293b' : '#0f172a';
+        ctx.fillRect(0, topY, w, floorH - 10);
+        ctx.fillStyle = '#334155';
+        ctx.fillRect(0, bottomY, w, 10);
+
+        // 층 이름 표시
+        ctx.fillStyle = idx === player.floorIdx ? '#38bdf8' : '#64748b';
+        ctx.font = 'bold 12px sans-serif';
+        ctx.textAlign = 'left';
+        ctx.fillText(fl.name, w * 0.11, topY + 18);
+
+        // ★ 각 층 3곳(좌측·중앙·우측) 초록색 피난유도등(EXIT) 방화문 계단 그리기
+        stairRatios.forEach((st, sIdx) => {
+          const doorX = st.ratio * w;
+
+          // 초록 유도등 스포트라이트
+          const beam = ctx.createLinearGradient(doorX, topY + 12, doorX, bottomY);
+          beam.addColorStop(0, 'rgba(16, 185, 129, 0.42)');
+          beam.addColorStop(1, 'rgba(16, 185, 129, 0.04)');
+          ctx.fillStyle = beam;
+          ctx.fillRect(doorX - 34, topY + 14, 68, bottomY - topY - 14);
+
+          // 초록색 피난유도등 표지판
+          ctx.fillStyle = '#10b981';
+          ctx.fillRect(doorX - 26, topY + 4, 52, 16);
+          ctx.fillStyle = '#ffffff';
+          ctx.font = '900 10px sans-serif';
+          ctx.textAlign = 'center';
+          ctx.fillText('🏃EXIT', doorX, topY + 15);
+
+          // 방화문 본체 (좌·중앙·우)
+          const doorH = Math.min(64, floorH - 28);
+          ctx.fillStyle = idx === 0 ? '#059669' : '#1d4ed8';
+          ctx.fillRect(doorX - 24, bottomY - doorH, 48, doorH);
+          ctx.strokeStyle = '#34d399';
+          ctx.lineWidth = 2;
+          ctx.strokeRect(doorX - 24, bottomY - doorH, 48, doorH);
+
+          // 자동 워프 발판 표시
+          ctx.fillStyle = '#34d399';
+          ctx.fillRect(doorX - 30, bottomY - 4, 60, 4);
+
+          ctx.fillStyle = '#ffffff';
+          ctx.font = 'bold 10px sans-serif';
+          const doorTitle = idx === 0 ? '1층탈출문' : (sIdx === 1 ? '중앙방화문' : '방화문계단');
+          ctx.fillText(doorTitle, doorX, bottomY - doorH / 2 - 2);
+          ctx.fillStyle = '#fde047';
+          ctx.font = '900 9px sans-serif';
+          ctx.fillText(gamePhase === 'escape' ? '▼자동탈출' : '▲자동이동', doorX, bottomY - 10);
+        });
+
+        // 객실 문 및 노란 타겟 발판 & 진행률 표시
+        fl.rooms.forEach(rm => {
+          const rx = rm.rx * w;
+          const doorH = Math.min(68, floorH - 26);
+
+          ctx.fillStyle = rm.fire ? '#7f1d1d' : '#0284c7';
+          ctx.fillRect(rx - 28, bottomY - doorH, 56, doorH);
+          ctx.strokeStyle = rm.fire ? '#f87171' : '#38bdf8';
+          ctx.lineWidth = 2;
+          ctx.strokeRect(rx - 28, bottomY - doorH, 56, doorH);
+
+          ctx.fillStyle = '#fff';
+          ctx.font = 'bold 11px sans-serif';
+          ctx.textAlign = 'center';
+          ctx.fillText(rm.no, rx, bottomY - doorH + 16);
+
+          if (rm.fire) {
+            // 노란 타겟 발판
+            ctx.fillStyle = '#fde047';
+            ctx.fillRect(rx - 44, bottomY - 5, 88, 5);
+            ctx.font = '900 10px sans-serif';
+            ctx.fillText('🎯여기서 소화기 발사!', rx, bottomY + 9);
+
+            // 화염 애니메이션
+            const flameScale = rm.progress >= 50 ? 0.55 : 1.0;
+            ctx.fillStyle = '#ef4444';
+            ctx.beginPath();
+            ctx.arc(rx, bottomY - 24, (19 + Math.sin(Date.now() / 80) * 3) * flameScale, 0, Math.PI * 2);
+            ctx.fill();
+            ctx.fillStyle = '#facc15';
+            ctx.beginPath();
+            ctx.arc(rx, bottomY - 20, 10 * flameScale, 0, Math.PI * 2);
+            ctx.fill();
+
+            // 50% 돌파 시 객실 내 72℃ 옛날 가용편 스프링클러 물줄기 합세
+            if (rm.progress >= 50) {
+              ctx.strokeStyle = '#38bdf8';
+              ctx.lineWidth = 2;
+              for (let i = -2; i <= 2; i++) {
+                ctx.beginPath();
+                ctx.moveTo(rx, bottomY - doorH + 4);
+                ctx.lineTo(rx + i * 9, bottomY - 14);
+                ctx.stroke();
+              }
+              ctx.fillStyle = '#38bdf8';
+              ctx.font = 'bold 10px sans-serif';
+              ctx.fillText('💧72℃ 옛날헤드 개방!', rx, topY + 18);
+            }
+
+            // 진압 게이지 바 (0~100%)
+            ctx.fillStyle = '#0f172a';
+            ctx.fillRect(rx - 34, bottomY - doorH - 16, 68, 11);
+            ctx.fillStyle = '#22c55e';
+            ctx.fillRect(rx - 34, bottomY - doorH - 16, (68 * rm.progress) / 100, 11);
+            ctx.fillStyle = '#fff';
+            ctx.font = 'bold 9px sans-serif';
+            ctx.fillText(Math.round(rm.progress) + '%', rx, bottomY - doorH - 7);
+          } else {
+            ctx.fillStyle = '#dcfce7';
+            ctx.font = 'bold 10px sans-serif';
+            ctx.fillText('✅ SAFE', rx, bottomY - 20);
+          }
+        });
+
+        // 장애물 표시
+        obstacles.filter(o => o.floorIdx === idx).forEach(ob => {
+          const ox = ob.rx * w;
+          ctx.fillStyle = '#f97316';
+          ctx.fillRect(ox - 14, bottomY - 20, 28, 20);
+          ctx.fillStyle = '#cbd5e1';
+          ctx.font = '10px sans-serif';
+          ctx.textAlign = 'center';
+          ctx.fillText(ob.label, ox, bottomY - 24);
+        });
+
+        // 연기 대방출 시각화
+        if (gamePhase === 'escape') {
+          ctx.fillStyle = 'rgba(15, 23, 42, 0.5)';
+          ctx.fillRect(0, topY + 20, w, floorH - 32);
+        }
+      });
+
+      // 플레이어 캐릭터 그리기
+      const pFloorTop = (floors.length - 1 - player.floorIdx) * floorH;
+      const py = pFloorTop + floorH - 10 + player.y;
+      const px = player.x;
+
+      // 방화문 앞 자동 진입 원형 게이지 표시
+      if (player.portalCharge > 0.05) {
+        ctx.strokeStyle = '#34d399';
+        ctx.lineWidth = 4;
+        ctx.beginPath();
+        ctx.arc(px, py - 28, 28, -Math.PI / 2, -Math.PI / 2 + Math.PI * 2 * player.portalCharge);
+        ctx.stroke();
+      }
+
+      ctx.save();
+      ctx.translate(px, py);
+      if (player.fainted) {
+        ctx.rotate(Math.PI / 2);
+        ctx.translate(-20, -10);
+      }
+
+      if (charType === 'pineman') {
+        // 파인맨: 붉은 망토 + 주황 소방복 + 파인리조트 심볼 로고 헤드
+        ctx.fillStyle = '#ef4444';
+        ctx.beginPath();
+        ctx.moveTo(-7 * player.dir, -32);
+        ctx.lineTo(-22 * player.dir, -6);
+        ctx.lineTo(0, -10);
+        ctx.fill();
+
+        ctx.fillStyle = '#f97316';
+        ctx.fillRect(-10, -30, 20, 24);
+
+        ctx.save();
+        ctx.translate(0, -45);
+        ctx.rotate(-15 * Math.PI / 180);
+        ctx.fillStyle = '#0086B3';
+        ctx.beginPath();
+        ctx.ellipse(0, 0, 14, 17, 0, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.strokeStyle = '#CCCCCC';
+        ctx.lineWidth = 2.3;
+        ctx.beginPath();
+        ctx.moveTo(-2, -10);
+        ctx.quadraticCurveTo(5, -3, -3, 3);
+        ctx.quadraticCurveTo(5, 8, -2, 11);
+        ctx.stroke();
+        ctx.restore();
+      } else {
+        // 귀여운 수달 소방대원 달이
+        ctx.fillStyle = '#78350f';
+        ctx.beginPath();
+        ctx.ellipse(-14 * player.dir, -10, 11, 5, 0.3 * player.dir, 0, Math.PI * 2);
+        ctx.fill();
+
+        ctx.fillStyle = '#92400e';
+        ctx.beginPath();
+        ctx.roundRect(-11, -30, 22, 24, 9);
+        ctx.fill();
+
+        ctx.fillStyle = '#92400e';
+        ctx.beginPath();
+        ctx.arc(0, -43, 13, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.fillStyle = '#fef3c7';
+        ctx.beginPath();
+        ctx.arc(-4, -40, 6, 0, Math.PI * 2);
+        ctx.arc(4, -40, 6, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.fillStyle = '#f43f5e';
+        ctx.beginPath();
+        ctx.arc(0, -42, 2.5, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.fillStyle = '#facc15';
+        ctx.beginPath();
+        ctx.arc(0, -49, 12, Math.PI, 0);
+        ctx.fill();
+      }
+
+      // 소화기 분사 파티클
+      if (player.spraying && player.extinguisher > 0 && !player.fainted) {
+        ctx.fillStyle = 'rgba(255, 255, 255, 0.88)';
+        for (let i = 1; i <= 5; i++) {
+          ctx.beginPath();
+          ctx.arc(player.dir * (16 + i * 13), -22 + Math.sin(Date.now() / 50 + i) * 5, 3.5 + i * 1.8, 0, Math.PI * 2);
+          ctx.fill();
+        }
+      }
+      ctx.restore();
+
+      // 상태 및 자동 이동 안내 말풍선
+      ctx.textAlign = 'center';
+      ctx.font = '900 11px sans-serif';
+      if (player.fainted) {
+        ctx.fillStyle = '#fde047';
+        ctx.fillText(`💫 연기 질식! ${player.faintTimer.toFixed(1)}초 후 젖은수건 쓰고 자동 부활!`, px, py - 66);
+      } else if (player.floatingTimer > 0) {
+        ctx.fillStyle = '#34d399';
+        ctx.fillText(player.floatingMsg, px, py - 66);
+      } else if (player.smoke >= 70) {
+        ctx.fillStyle = '#f87171';
+        ctx.fillText('💫 어질어질... 초록색 피난유도등(EXIT) 방화문으로 가세요!', px, py - 66);
+      } else if (player.smoke >= 30) {
+        ctx.fillStyle = '#fbbf24';
+        ctx.fillText('😷 콜록! 콜록!', px, py - 66);
+      }
+
+      requestAnimationFrame(() => {
+        update();
+        draw();
+      });
+    }
+
+    draw();
+  </script>
+</body>
+</html>
