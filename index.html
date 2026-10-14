@@ -12,18 +12,21 @@
   <link id="dynamic-touch-icon" rel="apple-touch-icon" href="pine-man-icon.png" />
   <link id="dynamic-manifest" rel="manifest" href="manifest.json" />
   <style>
-    * { box-sizing: border-box; margin: 0; padding: 0; user-select: none; -webkit-user-select: none; }
-    body {
+    * { box-sizing: border-box; margin: 0; padding: 0; user-select: none; -webkit-user-select: none; touch-action: none; }
+    html, body {
+      /* 스마트폰 화면 짤림(숨김) 방지 핵심 코드 */
+      height: 100%;
+      height: 100dvh; 
       background: #0b1320;
       color: #f8fafc;
       font-family: 'Pretendard', -apple-system, BlinkMacSystemFont, 'Malgun Gothic', sans-serif;
       overflow: hidden;
       display: flex;
       flex-direction: column;
-      height: 100vh;
       width: 100vw;
     }
-    /* 상단 헤더 (다운로드 버튼 제거 완료) */
+    
+    /* 상단 헤더 */
     header {
       background: linear-gradient(90deg, #0f172a, #1e293b);
       border-bottom: 2px solid #0086B3;
@@ -38,73 +41,48 @@
     .brand-box {
       display: flex;
       align-items: center;
-      gap: 8px;
+      gap: 6px;
       background: #ffffff;
       color: #111827;
-      padding: 3px 10px;
+      padding: 3px 8px;
       border-radius: 8px;
       font-weight: 900;
-      font-size: 14px;
-      box-shadow: 0 2px 6px rgba(0,0,0,0.3);
+      font-size: 13px;
     }
-    .top-btn-group {
-      display: flex;
-      align-items: center;
-      gap: 6px;
-      flex-wrap: wrap;
-    }
+    .top-btn-group { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
     .btn {
       border: none;
       border-radius: 6px;
-      padding: 6px 11px;
+      padding: 6px 10px;
       font-size: 12px;
       font-weight: 800;
       cursor: pointer;
       color: #fff;
-      display: inline-flex;
-      align-items: center;
-      gap: 4px;
-      transition: transform 0.1s;
     }
-    .btn:active { transform: scale(0.95); }
     .btn-help { background: #0284c7; }
     .btn-char { background: #ea580c; }
     .btn-smoke-test { background: #dc2626; }
     .btn-reset { background: #475569; }
 
-    /* 상태 표시줄 (HUD) */
+    /* 상태 표시줄 */
     .hud-bar {
       background: #1e293b;
-      padding: 6px 12px;
+      padding: 6px 10px;
       display: flex;
       align-items: center;
       justify-content: space-between;
-      gap: 10px;
-      font-size: 13px;
+      gap: 8px;
+      font-size: 12px;
       border-bottom: 1px solid #334155;
       flex-wrap: wrap;
     }
-    .gauge-wrap {
-      display: flex;
-      align-items: center;
-      gap: 6px;
-    }
+    .gauge-wrap { display: flex; align-items: center; gap: 4px; }
     .gauge-bg {
-      width: 105px;
-      height: 14px;
-      background: #0f172a;
-      border-radius: 7px;
-      overflow: hidden;
-      border: 1px solid #475569;
+      width: 90px; height: 12px; background: #0f172a; border-radius: 6px; overflow: hidden; border: 1px solid #475569;
     }
     .gauge-fill { height: 100%; transition: width 0.15s; }
     .mission-banner {
-      background: #f59e0b;
-      color: #111827;
-      padding: 4px 12px;
-      border-radius: 99px;
-      font-weight: 900;
-      font-size: 12px;
+      background: #f59e0b; color: #111827; padding: 4px 10px; border-radius: 99px; font-weight: 900; font-size: 11px;
     }
 
     /* 메인 캔버스 영역 */
@@ -120,54 +98,42 @@
       display: block;
     }
 
-    /* 모바일 및 터치 컨트롤러 */
+    /* 📱 모바일 터치 컨트롤러 (화면 크기에 맞춰 자동 정렬) */
     .touch-controls {
       background: #0f172a;
       border-top: 2px solid #1e293b;
-      padding: 8px 14px;
+      padding: 10px 8px;
+      padding-bottom: calc(10px + env(safe-area-inset-bottom, 0px)); /* 아이폰 하단 바 짤림 방지 */
       display: flex;
-      justify-content: space-between;
-      align-items: center;
-      gap: 10px;
+      flex-wrap: wrap; /* 좁은 화면에서 자동으로 2줄로 배치 */
+      justify-content: center;
+      gap: 8px;
       z-index: 20;
     }
-    .dpad, .action-pad { display: flex; gap: 8px; }
+    .dpad, .action-pad { display: flex; gap: 8px; flex: 1; justify-content: center; }
     .t-btn {
       background: #1e293b;
       border: 2px solid #475569;
       color: #f8fafc;
-      border-radius: 12px;
-      padding: 11px 16px;
+      border-radius: 10px;
+      padding: 12px 14px;
       font-size: 14px;
       font-weight: 900;
-      cursor: pointer;
-      touch-action: manipulation;
+      flex: 1;
+      white-space: nowrap;
+      box-shadow: 0 4px 0 #0f172a;
     }
-    .t-btn:active { background: #334155; transform: scale(0.95); }
+    .t-btn:active { background: #334155; transform: translateY(4px); box-shadow: 0 0 0 #0f172a; }
     .t-btn.fire-btn { background: #dc2626; border-color: #f87171; }
     .t-btn.jump-btn { background: #2563eb; border-color: #60a5fa; }
     .t-btn.down-btn { background: #059669; border-color: #34d399; }
 
     /* 모달 팝업 */
     .modal-overlay {
-      position: fixed;
-      inset: 0;
-      background: rgba(0,0,0,0.8);
-      display: none;
-      align-items: center;
-      justify-content: center;
-      z-index: 100;
-      padding: 16px;
+      position: fixed; inset: 0; background: rgba(0,0,0,0.8); display: none; align-items: center; justify-content: center; z-index: 100; padding: 16px;
     }
     .modal-card {
-      background: #1e293b;
-      border: 2px solid #38bdf8;
-      border-radius: 16px;
-      max-width: 500px;
-      width: 100%;
-      padding: 20px;
-      text-align: center;
-      box-shadow: 0 15px 40px rgba(0,0,0,0.6);
+      background: #1e293b; border: 2px solid #38bdf8; border-radius: 16px; max-width: 500px; width: 100%; padding: 20px; text-align: center;
     }
     .modal-card h2 { margin-bottom: 10px; color: #38bdf8; font-size: 20px; }
     .modal-card p { font-size: 13px; color: #cbd5e1; line-height: 1.6; margin-bottom: 14px; text-align: left; }
@@ -175,25 +141,22 @@
 </head>
 <body>
 
-  <!-- 깔끔해진 상단 헤더 -->
   <header>
     <div class="brand-box">
-      <svg width="24" height="24" viewBox="0 0 100 100">
+      <svg width="20" height="20" viewBox="0 0 100 100">
         <ellipse cx="50" cy="50" rx="36" ry="46" transform="rotate(-18 50 50)" fill="#0086B3"/>
         <path d="M48 20 C35 32, 62 38, 42 50 C28 60, 68 65, 45 82" stroke="#CCCCCC" stroke-width="8" fill="none" stroke-linecap="round"/>
       </svg>
-      <span>파인리조트 소방히어로</span>
+      <span>파인소방히어로</span>
     </div>
-
     <div class="top-btn-group">
-      <button class="btn btn-help" onclick="openModal('helpModal')">❓ 게임방법</button>
-      <button class="btn btn-char" id="charToggleBtn" onclick="toggleCharacter()">🦸‍♂️ 캐릭터: 파인맨</button>
-      <button class="btn btn-smoke-test" onclick="triggerSmokeEscape()">🚨 연기탈출·쓰러짐 체험</button>
+      <button class="btn btn-help" onclick="openModal('helpModal')">❓ 방법</button>
+      <button class="btn btn-char" id="charToggleBtn" onclick="toggleCharacter()">🦸‍♂️ 파인맨</button>
+      <button class="btn btn-smoke-test" onclick="triggerSmokeEscape()">🚨 연기체험</button>
       <button class="btn btn-reset" onclick="resetGame()">🔄 처음부터</button>
     </div>
   </header>
 
-  <!-- 게임 상태 바 -->
   <div class="hud-bar">
     <div class="gauge-wrap">
       <span>🧯 소화기:</span>
@@ -201,57 +164,55 @@
       <span id="extText">100%</span>
     </div>
     <div class="gauge-wrap">
-      <span>😷 연기흡입:</span>
+      <span>😷 연기:</span>
       <div class="gauge-bg"><div id="smokeGauge" class="gauge-fill" style="width:0%; background:#ef4444;"></div></div>
       <span id="smokeText">0%</span>
     </div>
     <div id="missionBanner" class="mission-banner">
-      🎯 1단계: 방화문(좌·중앙·우)에 서면 자동으로 올라갑니다! 노란 발판에서 소화기를 쏘세요!
+      🎯 방화문(초록불)에 서면 자동 이동! 노란 발판에서 불을 끄세요!
     </div>
   </div>
 
-  <!-- 메인 게임 캔버스 -->
   <div class="game-container">
     <canvas id="gameCanvas"></canvas>
   </div>
 
-  <!-- 하단 스마트폰 터치 & PC 겸용 조작부 -->
+  <!-- 스마트폰 하단 조작 버튼 영역 -->
   <div class="touch-controls">
     <div class="dpad">
       <button class="t-btn" id="btnLeft">◀ 왼쪽</button>
       <button class="t-btn" id="btnRight">오른쪽 ▶</button>
     </div>
     <div class="action-pad">
-      <button class="t-btn jump-btn" id="btnJump">▲ 점프 / 위층</button>
-      <button class="t-btn down-btn" id="btnDown">▼ 아래층</button>
-      <button class="t-btn fire-btn" id="btnSpray">🧯 소화기 발사</button>
+      <button class="t-btn jump-btn" id="btnJump">▲ 위로</button>
+      <button class="t-btn down-btn" id="btnDown">▼ 아래로</button>
+      <button class="t-btn fire-btn" id="btnSpray">🧯 발사</button>
     </div>
   </div>
 
-  <!-- 게임 방법 안내 모달 -->
   <div id="helpModal" class="modal-overlay">
     <div class="modal-card">
       <h2>🚒 파인리조트 소방히어로 조작 안내</h2>
       <p>
         <b>1. 마우스 클릭 없이 바로 계단 이동! (좌·중앙·우 3곳 방화문)</b><br/>
-        • 각 층의 <b>왼쪽·가운데·오른쪽 초록색 피난유도등(EXIT) 방화문</b> 앞에 서기만 하면 <b>0.35초 만에 자동으로 위층(연기 대피 시 아래층)으로 이동</b>합니다!<br/>
-        • 또는 방화문 앞에서 키보드 <b>[↑ 위] / [↓ 아래] 방향키</b>를 누르면 즉시 이동합니다.<br/><br/>
-        <b>2. 소화기로 화재 진압 (노란 타겟 발판)</b><br/>
-        • 불이 난 객실 앞 <b>노란 발판</b>에서 <b>[스페이스바]</b> 또는 <b>[🧯 소화기 발사]</b>를 누르세요.<br/>
-        • <b>50% 돌파 시</b> 객실 천장의 <b>72℃ 옛날 가용편 헤드</b>가 열리며 옥상 고가수조와 지하 3층 펌프 물줄기가 합세하고, <b>100%가 되면 파란색 SAFE 문</b>으로 바뀝니다.<br/><br/>
-        <b>3. 연기 질식 주의 & 1층 방화문 탈출</b><br/>
-        • 연기를 많이 마셔 100%가 되면 쓰러지지만, <b>3초 후 젖은 수건 보호막을 쓰고 자동 부활</b>합니다. 연기가 퍼지면 방화문 계단을 통해 <b>1층(1F) 방화문</b>으로 내려오면 탈출에 성공합니다!
+        • <b>초록색 피난유도등(EXIT) 방화문</b> 앞에 서기만 하면 <b>0.35초 만에 자동으로 층 이동</b>합니다!<br/>
+        • 방화문 앞에서 <b>[▲ 위로] / [▼ 아래로] 버튼</b>을 누르면 즉시 이동합니다.<br/><br/>
+        <b>2. 소화기로 화재 진압</b><br/>
+        • 불이 난 객실 앞 <b>노란 발판</b>에서 <b>[🧯 발사]</b>를 누르세요.<br/>
+        • <b>50% 돌파 시</b> 72℃ 옛날 가용편 헤드가 열려 합동 진화합니다.<br/><br/>
+        <b>3. 연기 탈출</b><br/>
+        • 연기 100% 흡입 시 쓰러지지만 <b>3초 후 자동 부활</b>합니다.<br/>
+        • 연기가 퍼지면 방화문을 통해 <b>1층</b>으로 내려와 탈출하세요!
       </p>
       <button class="btn btn-help" style="padding:10px 24px; font-size:14px;" onclick="closeModal('helpModal')">확인! 출동하기</button>
     </div>
   </div>
 
-  <!-- 미션 클리어 모달 -->
   <div id="clearModal" class="modal-overlay">
     <div class="modal-card">
       <h2>🏆 1층 피난유도등 방화문 탈출 성공!</h2>
       <p style="text-align:center;">
-        축하합니다! 불이 난 객실에 소화기를 분사해 <b>72℃ 옛날 스프링클러 헤드·옥상 고가수조·지하 3층 소방펌프</b>와 합동 진화하고, 유독 연기를 피해 <b>좌·중앙·우 방화문 계단</b>을 통해 1층 외부 방화문 밖으로 안전하게 생존 탈출했습니다!
+        축하합니다! 소화기 합동 진화에 성공하고, 유독 연기를 피해 좌·중앙·우 방화문 계단을 통해 안전하게 생존 탈출했습니다!
       </p>
       <button class="btn btn-help" style="padding:10px 22px; font-size:15px;" onclick="resetGame()">🔄 다시 플레이하기</button>
     </div>
@@ -269,632 +230,3 @@
       canvas.height = canvas.parentElement.clientHeight;
     }
     window.addEventListener('resize', resizeCanvas);
-    resizeCanvas();
-
-    let charType = 'pineman'; // 'pineman' or 'otter'
-    function toggleCharacter() {
-      charType = charType === 'pineman' ? 'otter' : 'pineman';
-      document.getElementById('charToggleBtn').innerText =
-        charType === 'pineman' ? '🦸‍♂️ 캐릭터: 파인맨' : '🦦 캐릭터: 수달 달이';
-    }
-
-    // 4개 주요 층 구성 (각 층 좌측·중앙·우측 방화문 계단과 겹치지 않는 위치에 객실/장애물 배치)
-    const floors = [
-      {
-        level: 1,
-        name: '1F 로비·식당 (좌·중앙·우 방화문 최종 탈출층)',
-        rooms: []
-      },
-      {
-        level: 2,
-        name: '2F 지상 방재실(R형 수신기) & 콘도 객실층',
-        rooms: [
-          { rx: 0.24, no: '201호', fire: true, progress: 0 },
-          { rx: 0.74, no: '202호', fire: false, progress: 100 }
-        ]
-      },
-      {
-        level: 3,
-        name: '6F 콘도 중층 객실 (복도 감지기 & 소화전)',
-        rooms: [
-          { rx: 0.27, no: '601호', fire: false, progress: 100 },
-          { rx: 0.72, no: '602호', fire: true, progress: 0 }
-        ]
-      },
-      {
-        level: 4,
-        name: '10F 콘도 고층 객실 (상부 옥상 고가수조 중력급수)',
-        rooms: [
-          { rx: 0.25, no: '1001호', fire: true, progress: 0 },
-          { rx: 0.75, no: '1002호', fire: false, progress: 100 }
-        ]
-      }
-    ];
-
-    // 의미 있는 소방 장애물 (점프로 회피)
-    const obstacles = [
-      { floorIdx: 0, rx: 0.32, label: '방화문 앞 적치물' },
-      { floorIdx: 1, rx: 0.62, label: '문어발 콘센트' },
-      { floorIdx: 2, rx: 0.38, label: '복도 여행가방' },
-      { floorIdx: 3, rx: 0.63, label: '세탁물 카트' }
-    ];
-
-    // 각 층 3개의 방화문 계단 위치 비율 (좌측 6%, 중앙 50%, 우측 94%)
-    const stairRatios = [
-      { ratio: 0.06, label: '좌측 방화문계단' },
-      { ratio: 0.50, label: '중앙 방화문계단' },
-      { ratio: 0.94, label: '우측 방화문계단' }
-    ];
-
-    const player = {
-      floorIdx: 0,
-      x: 160,
-      y: 0,
-      vy: 0,
-      isJumping: false,
-      dir: 1,
-      spraying: false,
-      extinguisher: 100,
-      smoke: 0,
-      fainted: false,
-      faintTimer: 0,
-      towelBuff: 0,
-      portalCharge: 0,   // 방화문 앞 자동 진입 게이지 (0 ~ 1)
-      portalCooldown: 0, // 층 이동 직후 연속 워프 방지 쿨타임
-      floatingMsg: '',
-      floatingTimer: 0
-    };
-
-    let gamePhase = 'fire'; // 'fire' -> 'escape' -> 'clear'
-    let keys = { left: false, right: false };
-
-    function showFloatingMsg(msg) {
-      player.floatingMsg = msg;
-      player.floatingTimer = 1.6;
-    }
-
-    function triggerSmokeEscape() {
-      gamePhase = 'escape';
-      player.smoke = Math.max(player.smoke, 65);
-      document.getElementById('missionBanner').style.background = '#ef4444';
-      document.getElementById('missionBanner').style.color = '#ffffff';
-      document.getElementById('missionBanner').innerText =
-        '🚨 2단계(연기 확산): 가까운 방화문 계단(좌·중앙·우)에 서면 1층으로 자동 내려갑니다!';
-      showFloatingMsg('🚨 연기 확산! 방화문 계단으로 대피하세요!');
-    }
-
-    function resetGame() {
-      closeModal('clearModal');
-      floors[1].rooms[0].fire = true; floors[1].rooms[0].progress = 0;
-      floors[2].rooms[1].fire = true; floors[2].rooms[1].progress = 0;
-      floors[3].rooms[0].fire = true; floors[3].rooms[0].progress = 0;
-      player.floorIdx = 0;
-      player.x = canvas.width * 0.16;
-      player.y = 0;
-      player.vy = 0;
-      player.extinguisher = 100;
-      player.smoke = 0;
-      player.fainted = false;
-      player.portalCharge = 0;
-      player.portalCooldown = 0.8;
-      gamePhase = 'fire';
-      document.getElementById('missionBanner').style.background = '#f59e0b';
-      document.getElementById('missionBanner').style.color = '#111827';
-      document.getElementById('missionBanner').innerText =
-        '🎯 1단계: 방화문(좌·중앙·우)에 서면 자동으로 올라갑니다! 노란 발판에서 소화기를 쏘세요!';
-    }
-
-    // 플레이어가 현재 방화문 계단(좌·중앙·우) 앞에 있는지 확인
-    function getNearbyStair(w) {
-      for (let i = 0; i < stairRatios.length; i++) {
-        const sx = stairRatios[i].ratio * w;
-        if (Math.abs(player.x - sx) < 38) {
-          return { index: i, x: sx, info: stairRatios[i] };
-        }
-      }
-      return null;
-    }
-
-    // 스마트 계단 이동 함수 (direction: 1=위층, -1=아래층, 0=상황별 자동 판단)
-    function moveFloorSmart(direction = 0) {
-      if (player.fainted || gamePhase === 'clear') return;
-
-      // 피난유도등 신선한 공기로 연기 수치 회복
-      player.smoke = Math.max(0, player.smoke - 28);
-
-      // 연기 탈출 단계에서 1층 방화문에 도달하거나 내려오면 즉시 탈출 성공!
-      if (gamePhase === 'escape') {
-        if (player.floorIdx > 0) {
-          player.floorIdx--;
-          player.portalCooldown = 0.9;
-          player.portalCharge = 0;
-          showFloatingMsg('🚪 방화문 통과! ▼ 아래층으로 대피!');
-          if (player.floorIdx === 0) {
-            setTimeout(() => {
-              if (gamePhase === 'escape' && player.floorIdx === 0) {
-                gamePhase = 'clear';
-                openModal('clearModal');
-              }
-            }, 600);
-          }
-          return;
-        } else {
-          gamePhase = 'clear';
-          openModal('clearModal');
-          return;
-        }
-      }
-
-      // 화재 진압 단계(1단계): 수동 방향이 있으면 우선 적용, 없으면 불이 난 층 방향으로 스마트 이동!
-      let targetFloor = player.floorIdx;
-      if (direction === 1) {
-        targetFloor = Math.min(floors.length - 1, player.floorIdx + 1);
-        if (targetFloor === player.floorIdx) targetFloor = 0; // 꼭대기에서 또 올라가면 1층으로 순환
-      } else if (direction === -1) {
-        targetFloor = Math.max(0, player.floorIdx - 1);
-      } else {
-        // 자동 방향(0): 위층에 불이 있으면 위로, 아래층에 불이 있으면 아래로 이동
-        const fireFloors = floors
-          .map((f, idx) => ({ idx, hasFire: f.rooms.some(r => r.fire) }))
-          .filter(item => item.hasFire);
-
-        if (fireFloors.length > 0) {
-          const upperFire = fireFloors.find(f => f.idx > player.floorIdx);
-          if (upperFire) {
-            targetFloor = player.floorIdx + 1;
-          } else {
-            const lowerFire = fireFloors.find(f => f.idx < player.floorIdx);
-            if (lowerFire) {
-              targetFloor = player.floorIdx - 1;
-            } else {
-              // 현재 층에만 불이 있는데 계단에 서 있으면 한 층 위로 이동
-              targetFloor = (player.floorIdx + 1) % floors.length;
-            }
-          }
-        } else {
-          targetFloor = (player.floorIdx + 1) % floors.length;
-        }
-      }
-
-      const goingUp = targetFloor > player.floorIdx;
-      player.floorIdx = targetFloor;
-      player.portalCooldown = 1.0;
-      player.portalCharge = 0;
-      showFloatingMsg(goingUp ? '🚪 방화문 자동 이동! ▲ 위층 도착' : '🚪 방화문 자동 이동! ▼ 아래층 도착');
-    }
-
-    // 키보드 및 터치 이벤트
-    window.addEventListener('keydown', e => {
-      if (e.code === 'ArrowLeft') keys.left = true;
-      if (e.code === 'ArrowRight') keys.right = true;
-      if (e.code === 'ArrowUp') handleUpAction();
-      if (e.code === 'ArrowDown') handleDownAction();
-      if (e.code === 'Space') player.spraying = true;
-    });
-    window.addEventListener('keyup', e => {
-      if (e.code === 'ArrowLeft') keys.left = false;
-      if (e.code === 'ArrowRight') keys.right = false;
-      if (e.code === 'Space') player.spraying = false;
-    });
-
-    // 캔버스 속 방화문을 마우스/손가락으로 직접 눌러도 즉시 이동 지원
-    canvas.addEventListener('pointerdown', e => {
-      const rect = canvas.getBoundingClientRect();
-      const clickX = e.clientX - rect.left;
-      const clickY = e.clientY - rect.top;
-      const w = canvas.width;
-      const floorH = canvas.height / floors.length;
-      const clickedFloorIdx = floors.length - 1 - Math.floor(clickY / floorH);
-
-      stairRatios.forEach(st => {
-        const sx = st.ratio * w;
-        if (Math.abs(clickX - sx) < 42) {
-          if (clickedFloorIdx !== player.floorIdx && clickedFloorIdx >= 0 && clickedFloorIdx < floors.length) {
-            player.floorIdx = clickedFloorIdx;
-            player.x = sx;
-            player.portalCooldown = 1.0;
-            showFloatingMsg('🚪 선택한 층 방화문으로 이동!');
-          } else {
-            moveFloorSmart(0);
-          }
-        }
-      });
-    });
-
-    function handleUpAction() {
-      if (player.fainted) return;
-      const nearStair = getNearbyStair(canvas.width);
-      // 방화문 계단 앞에서는 ↑ 키를 누르면 즉시 위층(탈출 시 아래층) 이동!
-      if (nearStair) {
-        moveFloorSmart(gamePhase === 'escape' ? -1 : 1);
-      } else if (!player.isJumping) {
-        player.vy = -9.5;
-        player.isJumping = true;
-      }
-    }
-
-    function handleDownAction() {
-      if (player.fainted) return;
-      const nearStair = getNearbyStair(canvas.width);
-      if (nearStair) {
-        moveFloorSmart(-1);
-      }
-    }
-
-    function bindTouch(id, startFn, endFn) {
-      const el = document.getElementById(id);
-      el.addEventListener('mousedown', startFn);
-      el.addEventListener('mouseup', endFn);
-      el.addEventListener('touchstart', e => { e.preventDefault(); startFn(); });
-      el.addEventListener('touchend', e => { e.preventDefault(); endFn(); });
-    }
-    bindTouch('btnLeft', () => keys.left = true, () => keys.left = false);
-    bindTouch('btnRight', () => keys.right = true, () => keys.right = false);
-    bindTouch('btnJump', handleUpAction, () => {});
-    bindTouch('btnDown', handleDownAction, () => {});
-    bindTouch('btnSpray', () => player.spraying = true, () => player.spraying = false);
-
-    function update() {
-      const w = canvas.width;
-      if (player.floatingTimer > 0) player.floatingTimer -= 1 / 60;
-      if (player.portalCooldown > 0) player.portalCooldown -= 1 / 60;
-
-      if (player.fainted) {
-        player.faintTimer -= 1 / 60;
-        if (player.faintTimer <= 0) {
-          player.fainted = false;
-          player.smoke = 15;
-          player.towelBuff = 5;
-          showFloatingMsg('💧 젖은 수건 보호막으로 부활!');
-        }
-        return;
-      }
-
-      if (player.towelBuff > 0) player.towelBuff -= 1 / 60;
-
-      const speed = player.smoke > 70 ? 2.6 : 5.0;
-      if (keys.left) { player.x -= speed; player.dir = -1; }
-      if (keys.right) { player.x += speed; player.dir = 1; }
-
-      // 복도 양끝 방화문을 향해 계속 달리면 멈추지 않고 즉시 다음 층으로 자동 돌파!
-      if (player.x < 22) {
-        player.x = w * 0.06 + 42;
-        if (player.portalCooldown <= 0) moveFloorSmart(0);
-      } else if (player.x > w - 22) {
-        player.x = w * 0.94 - 42;
-        if (player.portalCooldown <= 0) moveFloorSmart(0);
-      }
-
-      // 점프 물리
-      player.y += player.vy;
-      if (player.y < 0) {
-        player.vy += 0.55;
-      } else {
-        player.y = 0;
-        player.vy = 0;
-        player.isJumping = false;
-      }
-
-      // ★ 천재적 자동 계단 포탈: 좌·중앙·우 방화문 앞에 0.35초 서 있으면 마우스 클릭 없이 자동 이동!
-      const nearStair = getNearbyStair(w);
-      if (nearStair && !player.spraying && player.portalCooldown <= 0) {
-        player.portalCharge += 1 / 22; // 약 0.35초 만에 게이지 100% 도달
-        if (player.portalCharge >= 1) {
-          // 다음 층 도착 후 무한 워프되지 않도록 문 옆 안전 위치로 살짝 이동
-          const offset = nearStair.index === 2 ? -46 : 46;
-          player.x = nearStair.x + offset;
-          moveFloorSmart(0);
-        }
-      } else {
-        player.portalCharge = Math.max(0, player.portalCharge - 0.08);
-      }
-
-      // 소화기 분사 및 화재 진압 판정
-      const curFloor = floors[player.floorIdx];
-      if (player.spraying && player.extinguisher > 0) {
-        player.extinguisher = Math.max(0, player.extinguisher - 0.22);
-        curFloor.rooms.forEach(rm => {
-          const roomScreenX = rm.rx * w;
-          if (rm.fire && Math.abs(player.x - roomScreenX) < 95) {
-            player.dir = roomScreenX >= player.x ? 1 : -1;
-            rm.progress = Math.min(100, rm.progress + 1.15);
-            if (rm.progress >= 100) {
-              rm.fire = false;
-              showFloatingMsg(`✅ ${rm.no} 진화 완료! 방화문으로 이동하세요!`);
-            }
-          }
-        });
-      }
-
-      // 모든 불 진화 또는 소화기 소진 시 연기 탈출 단계로 전환
-      const remainingFires = floors.reduce((acc, f) => acc + f.rooms.filter(r => r.fire).length, 0);
-      if (gamePhase === 'fire' && (remainingFires === 0 || player.extinguisher <= 0)) {
-        triggerSmokeEscape();
-      }
-
-      // 연기 흡입 계산 (피난유도등 방화문 근처에서는 신선한 공기로 감소)
-      if (nearStair) {
-        player.smoke = Math.max(0, player.smoke - 0.45);
-        if (gamePhase === 'escape' && player.floorIdx === 0) {
-          gamePhase = 'clear';
-          openModal('clearModal');
-        }
-      } else if (gamePhase === 'escape' && player.towelBuff <= 0) {
-        player.smoke = Math.min(100, player.smoke + 0.20);
-      }
-
-      if (player.smoke >= 100 && !player.fainted) {
-        player.fainted = true;
-        player.faintTimer = 3.0;
-      }
-
-      // HUD 업데이트
-      document.getElementById('extGauge').style.width = player.extinguisher + '%';
-      document.getElementById('extText').innerText = Math.round(player.extinguisher) + '%';
-      document.getElementById('smokeGauge').style.width = player.smoke + '%';
-      document.getElementById('smokeText').innerText = Math.round(player.smoke) + '%';
-    }
-
-    function draw() {
-      const w = canvas.width;
-      const h = canvas.height;
-      ctx.clearRect(0, 0, w, h);
-
-      const floorH = h / floors.length;
-
-      // 4개 층 그리기
-      floors.forEach((fl, idx) => {
-        const topY = (floors.length - 1 - idx) * floorH;
-        const bottomY = topY + floorH - 10;
-
-        // 복도 배경
-        ctx.fillStyle = idx === player.floorIdx ? '#1e293b' : '#0f172a';
-        ctx.fillRect(0, topY, w, floorH - 10);
-        ctx.fillStyle = '#334155';
-        ctx.fillRect(0, bottomY, w, 10);
-
-        // 층 이름 표시
-        ctx.fillStyle = idx === player.floorIdx ? '#38bdf8' : '#64748b';
-        ctx.font = 'bold 12px sans-serif';
-        ctx.textAlign = 'left';
-        ctx.fillText(fl.name, w * 0.11, topY + 18);
-
-        // ★ 각 층 3곳(좌측·중앙·우측) 초록색 피난유도등(EXIT) 방화문 계단 그리기
-        stairRatios.forEach((st, sIdx) => {
-          const doorX = st.ratio * w;
-
-          // 초록 유도등 스포트라이트
-          const beam = ctx.createLinearGradient(doorX, topY + 12, doorX, bottomY);
-          beam.addColorStop(0, 'rgba(16, 185, 129, 0.42)');
-          beam.addColorStop(1, 'rgba(16, 185, 129, 0.04)');
-          ctx.fillStyle = beam;
-          ctx.fillRect(doorX - 34, topY + 14, 68, bottomY - topY - 14);
-
-          // 초록색 피난유도등 표지판
-          ctx.fillStyle = '#10b981';
-          ctx.fillRect(doorX - 26, topY + 4, 52, 16);
-          ctx.fillStyle = '#ffffff';
-          ctx.font = '900 10px sans-serif';
-          ctx.textAlign = 'center';
-          ctx.fillText('🏃EXIT', doorX, topY + 15);
-
-          // 방화문 본체 (좌·중앙·우)
-          const doorH = Math.min(64, floorH - 28);
-          ctx.fillStyle = idx === 0 ? '#059669' : '#1d4ed8';
-          ctx.fillRect(doorX - 24, bottomY - doorH, 48, doorH);
-          ctx.strokeStyle = '#34d399';
-          ctx.lineWidth = 2;
-          ctx.strokeRect(doorX - 24, bottomY - doorH, 48, doorH);
-
-          // 자동 워프 발판 표시
-          ctx.fillStyle = '#34d399';
-          ctx.fillRect(doorX - 30, bottomY - 4, 60, 4);
-
-          ctx.fillStyle = '#ffffff';
-          ctx.font = 'bold 10px sans-serif';
-          const doorTitle = idx === 0 ? '1층탈출문' : (sIdx === 1 ? '중앙방화문' : '방화문계단');
-          ctx.fillText(doorTitle, doorX, bottomY - doorH / 2 - 2);
-          ctx.fillStyle = '#fde047';
-          ctx.font = '900 9px sans-serif';
-          ctx.fillText(gamePhase === 'escape' ? '▼자동탈출' : '▲자동이동', doorX, bottomY - 10);
-        });
-
-        // 객실 문 및 노란 타겟 발판 & 진행률 표시
-        fl.rooms.forEach(rm => {
-          const rx = rm.rx * w;
-          const doorH = Math.min(68, floorH - 26);
-
-          ctx.fillStyle = rm.fire ? '#7f1d1d' : '#0284c7';
-          ctx.fillRect(rx - 28, bottomY - doorH, 56, doorH);
-          ctx.strokeStyle = rm.fire ? '#f87171' : '#38bdf8';
-          ctx.lineWidth = 2;
-          ctx.strokeRect(rx - 28, bottomY - doorH, 56, doorH);
-
-          ctx.fillStyle = '#fff';
-          ctx.font = 'bold 11px sans-serif';
-          ctx.textAlign = 'center';
-          ctx.fillText(rm.no, rx, bottomY - doorH + 16);
-
-          if (rm.fire) {
-            // 노란 타겟 발판
-            ctx.fillStyle = '#fde047';
-            ctx.fillRect(rx - 44, bottomY - 5, 88, 5);
-            ctx.font = '900 10px sans-serif';
-            ctx.fillText('🎯여기서 소화기 발사!', rx, bottomY + 9);
-
-            // 화염 애니메이션
-            const flameScale = rm.progress >= 50 ? 0.55 : 1.0;
-            ctx.fillStyle = '#ef4444';
-            ctx.beginPath();
-            ctx.arc(rx, bottomY - 24, (19 + Math.sin(Date.now() / 80) * 3) * flameScale, 0, Math.PI * 2);
-            ctx.fill();
-            ctx.fillStyle = '#facc15';
-            ctx.beginPath();
-            ctx.arc(rx, bottomY - 20, 10 * flameScale, 0, Math.PI * 2);
-            ctx.fill();
-
-            // 50% 돌파 시 객실 내 72℃ 옛날 가용편 스프링클러 물줄기 합세
-            if (rm.progress >= 50) {
-              ctx.strokeStyle = '#38bdf8';
-              ctx.lineWidth = 2;
-              for (let i = -2; i <= 2; i++) {
-                ctx.beginPath();
-                ctx.moveTo(rx, bottomY - doorH + 4);
-                ctx.lineTo(rx + i * 9, bottomY - 14);
-                ctx.stroke();
-              }
-              ctx.fillStyle = '#38bdf8';
-              ctx.font = 'bold 10px sans-serif';
-              ctx.fillText('💧72℃ 옛날헤드 개방!', rx, topY + 18);
-            }
-
-            // 진압 게이지 바 (0~100%)
-            ctx.fillStyle = '#0f172a';
-            ctx.fillRect(rx - 34, bottomY - doorH - 16, 68, 11);
-            ctx.fillStyle = '#22c55e';
-            ctx.fillRect(rx - 34, bottomY - doorH - 16, (68 * rm.progress) / 100, 11);
-            ctx.fillStyle = '#fff';
-            ctx.font = 'bold 9px sans-serif';
-            ctx.fillText(Math.round(rm.progress) + '%', rx, bottomY - doorH - 7);
-          } else {
-            ctx.fillStyle = '#dcfce7';
-            ctx.font = 'bold 10px sans-serif';
-            ctx.fillText('✅ SAFE', rx, bottomY - 20);
-          }
-        });
-
-        // 장애물 표시
-        obstacles.filter(o => o.floorIdx === idx).forEach(ob => {
-          const ox = ob.rx * w;
-          ctx.fillStyle = '#f97316';
-          ctx.fillRect(ox - 14, bottomY - 20, 28, 20);
-          ctx.fillStyle = '#cbd5e1';
-          ctx.font = '10px sans-serif';
-          ctx.textAlign = 'center';
-          ctx.fillText(ob.label, ox, bottomY - 24);
-        });
-
-        // 연기 대방출 시각화
-        if (gamePhase === 'escape') {
-          ctx.fillStyle = 'rgba(15, 23, 42, 0.5)';
-          ctx.fillRect(0, topY + 20, w, floorH - 32);
-        }
-      });
-
-      // 플레이어 캐릭터 그리기
-      const pFloorTop = (floors.length - 1 - player.floorIdx) * floorH;
-      const py = pFloorTop + floorH - 10 + player.y;
-      const px = player.x;
-
-      // 방화문 앞 자동 진입 원형 게이지 표시
-      if (player.portalCharge > 0.05) {
-        ctx.strokeStyle = '#34d399';
-        ctx.lineWidth = 4;
-        ctx.beginPath();
-        ctx.arc(px, py - 28, 28, -Math.PI / 2, -Math.PI / 2 + Math.PI * 2 * player.portalCharge);
-        ctx.stroke();
-      }
-
-      ctx.save();
-      ctx.translate(px, py);
-      if (player.fainted) {
-        ctx.rotate(Math.PI / 2);
-        ctx.translate(-20, -10);
-      }
-
-      if (charType === 'pineman') {
-        // 파인맨: 붉은 망토 + 주황 소방복 + 파인리조트 심볼 로고 헤드
-        ctx.fillStyle = '#ef4444';
-        ctx.beginPath();
-        ctx.moveTo(-7 * player.dir, -32);
-        ctx.lineTo(-22 * player.dir, -6);
-        ctx.lineTo(0, -10);
-        ctx.fill();
-
-        ctx.fillStyle = '#f97316';
-        ctx.fillRect(-10, -30, 20, 24);
-
-        ctx.save();
-        ctx.translate(0, -45);
-        ctx.rotate(-15 * Math.PI / 180);
-        ctx.fillStyle = '#0086B3';
-        ctx.beginPath();
-        ctx.ellipse(0, 0, 14, 17, 0, 0, Math.PI * 2);
-        ctx.fill();
-        ctx.strokeStyle = '#CCCCCC';
-        ctx.lineWidth = 2.3;
-        ctx.beginPath();
-        ctx.moveTo(-2, -10);
-        ctx.quadraticCurveTo(5, -3, -3, 3);
-        ctx.quadraticCurveTo(5, 8, -2, 11);
-        ctx.stroke();
-        ctx.restore();
-      } else {
-        // 귀여운 수달 소방대원 달이
-        ctx.fillStyle = '#78350f';
-        ctx.beginPath();
-        ctx.ellipse(-14 * player.dir, -10, 11, 5, 0.3 * player.dir, 0, Math.PI * 2);
-        ctx.fill();
-
-        ctx.fillStyle = '#92400e';
-        ctx.beginPath();
-        ctx.roundRect(-11, -30, 22, 24, 9);
-        ctx.fill();
-
-        ctx.fillStyle = '#92400e';
-        ctx.beginPath();
-        ctx.arc(0, -43, 13, 0, Math.PI * 2);
-        ctx.fill();
-        ctx.fillStyle = '#fef3c7';
-        ctx.beginPath();
-        ctx.arc(-4, -40, 6, 0, Math.PI * 2);
-        ctx.arc(4, -40, 6, 0, Math.PI * 2);
-        ctx.fill();
-        ctx.fillStyle = '#f43f5e';
-        ctx.beginPath();
-        ctx.arc(0, -42, 2.5, 0, Math.PI * 2);
-        ctx.fill();
-        ctx.fillStyle = '#facc15';
-        ctx.beginPath();
-        ctx.arc(0, -49, 12, Math.PI, 0);
-        ctx.fill();
-      }
-
-      // 소화기 분사 파티클
-      if (player.spraying && player.extinguisher > 0 && !player.fainted) {
-        ctx.fillStyle = 'rgba(255, 255, 255, 0.88)';
-        for (let i = 1; i <= 5; i++) {
-          ctx.beginPath();
-          ctx.arc(player.dir * (16 + i * 13), -22 + Math.sin(Date.now() / 50 + i) * 5, 3.5 + i * 1.8, 0, Math.PI * 2);
-          ctx.fill();
-        }
-      }
-      ctx.restore();
-
-      // 상태 및 자동 이동 안내 말풍선
-      ctx.textAlign = 'center';
-      ctx.font = '900 11px sans-serif';
-      if (player.fainted) {
-        ctx.fillStyle = '#fde047';
-        ctx.fillText(`💫 연기 질식! ${player.faintTimer.toFixed(1)}초 후 젖은수건 쓰고 자동 부활!`, px, py - 66);
-      } else if (player.floatingTimer > 0) {
-        ctx.fillStyle = '#34d399';
-        ctx.fillText(player.floatingMsg, px, py - 66);
-      } else if (player.smoke >= 70) {
-        ctx.fillStyle = '#f87171';
-        ctx.fillText('💫 어질어질... 초록색 피난유도등(EXIT) 방화문으로 가세요!', px, py - 66);
-      } else if (player.smoke >= 30) {
-        ctx.fillStyle = '#fbbf24';
-        ctx.fillText('😷 콜록! 콜록!', px, py - 66);
-      }
-
-      requestAnimationFrame(() => {
-        update();
-        draw();
-      });
-    }
-
-    draw();
-  </script>
-</body>
-</html>
